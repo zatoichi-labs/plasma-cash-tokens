@@ -103,7 +103,7 @@ pub fn is_history_valid(history: &[Transaction], ctx: &Secp256k1) -> bool {
     // Check that each transition increases the value of prevBlkNum from the former
     //let blk_ref_increases = history.iter()
     //                        .map(|txn| txn.prevBlkNum) // Reference to Plasma block prior to txn
-    //                        .is_sorted_by(|prior_txn_blk, txn_blk| prior_txn_blk < txn_blk)
+    //                        .is_sorted_by(|prior_txn_blk, txn_blk| prior_txn_blk < txn_blk);
     //                        FIXME: is_sorted_by is in nightly...
     let mut blk_ref_increases = true;
     let mut prior_txn_blk = history.first().unwrap().prevBlkNum;
@@ -111,14 +111,9 @@ pub fn is_history_valid(history: &[Transaction], ctx: &Secp256k1) -> bool {
         blk_ref_increases &= prior_txn_blk < txn.prevBlkNum;
         prior_txn_blk = txn.prevBlkNum;
     });
-    
-    // Token is valid if:
-    // - The history is valid
-    // - The current owner is the last known owner
-    // - All the transactions are consistent
-    return valid_txn_history
-           && all_same_token_uid
-           && blk_ref_increases;
+
+    // return:
+    valid_txn_history && all_same_token_uid && blk_ref_increases
 }
 
 #[derive(Debug, PartialEq)]
