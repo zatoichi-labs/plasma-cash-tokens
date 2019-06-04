@@ -1,9 +1,9 @@
 extern crate ethereum_types;
-pub use ethereum_types::{Address, U256};
+pub use ethereum_types::{Address, U256, H256};
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
-    Same, // LHS == RHS
+    Same, // LHS & RHS are the same exact transaction
     Parent, // LHS is the parent of RHS
     Child, // RHS is the parent of LHS
     EarlierSibling, // LHS & RHS have same parent, but LHS is earlier
@@ -16,27 +16,53 @@ pub enum TxnCmp {
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
 pub trait PlasmaCashTxn {
+
+    /// Transaction is well-formed (implementation-specific)
+    /// Note: This might be used for certain use-cases to verify proofs,
+    ///       whereas other use cases might have only minimal verification.
+    fn valid(&self) -> bool;
+
+    /// Returns the "Leaf Hash" of this transaction, which may be the
+    /// encoded transaction structure directly (and signed), or it may
+    /// be the publicly accessible committment, as required for certain
+    /// applications such as Zero Knowledge Proofs. Implementation is
+    /// left up to the end user, but this must return a consistent hash
+    /// for use in the Sparse Merkle Tree data structure that Plasma Cash
+    /// is standardized around for it's key: value txn datastore.
+    fn leaf_hash(&self) -> H256;
+
     /// Simply gives the receiver of the transaction, if available.
-    /// Note: This info may not be public, e.g. Zero Knowledge Proofs
+    /// Note: This is a Convenience API. This info may not be public.
+    ///       For example, use cases involving Zero Knowledge Proofs.
     ///       (In that scenario, only certain parties can see this.)
     fn receiver(&self) -> Option<Address>;
 
     /// Simply gives the sender of the transaction, if available.
-    /// Note: This info may not be public, e.g. Zero Knowledge Proofs
+    /// Note: This is a Convenience API. This info may not be public.
+    ///       For example, use cases involving Zero Knowledge Proofs.
     ///       (In that scenario, only certain parties can see this.)
     fn sender(&self) -> Option<Address>;
 
-    /// Returns the relationship of another transaction (RHS) to this one (LHS)
+    /// Returns the relationship of another transaction (RHS) to this
+    /// one (LHS). See Enum definition for more information.
+    /// Note: This is used in the history verification logic, as well as
+    ///       withdrawal challenge detection.
     fn compare(&self, other: &Self) -> TxnCmp;
 }
 
+/// Validate ordered list of all transactions for a given token
 pub fn is_history_valid<T: PlasmaCashTxn>(history: &[T]) -> bool {
     // If token has no history, return True
     if history.len() == 0 {
         return true;
     }
 
-    // History is valid if each transaction follows the previous
+    // Ensure all transactions are invidiually well-formed
+    if !history.iter().map(|txn| txn.valid()).all(|a| a) {
+        return false;
+    }
+
+    // History is valid if each txn is the child of the previous
     let mut history_iter = history.iter().peekable();
     while let Some(prev_txn) = history_iter.next() {
         if let Some(txn) = history_iter.peek() {
@@ -59,8 +85,8 @@ pub enum TokenStatus {
 }
 
 pub struct Token<T: PlasmaCashTxn> {
-    pub uid: U256,
-    pub status: TokenStatus,
+    pub uid: U256, // Key for Sparse Merkle Tree datastore
+    pub status: TokenStatus, // Convenience API
     pub history: Vec<T>,
 }
 

@@ -57,15 +57,7 @@ impl Transaction {
     }
 
     pub fn unsigned_message(&self) -> Message {
-        // Construct vector of Tokens
-        let new_owner = ethabi::Token::Address(self.newOwner);
-        let token_id = ethabi::Token::Uint(self.tokenId);
-        let prev_blk_num = ethabi::Token::Uint(self.prevBlkNum);
-        let msg_vec = &[new_owner, token_id, prev_blk_num];
-        // Encode vector of Tokens
-        let msg_bytes = ethabi::encode(msg_vec);
-        // Return keccak hash of encoded struct
-        Message::from_slice(keccak(msg_bytes).as_fixed_bytes()).unwrap()
+        Message::from_slice(self.leaf_hash().as_fixed_bytes()).unwrap()
     }
 
     pub fn sign(&self, skey: &key::SecretKey) -> Transaction {
@@ -77,6 +69,24 @@ impl Transaction {
 }
 
 impl PlasmaCashTxn for Transaction {
+
+    fn valid(&self) -> bool {
+        // Signature is there, and it's valid
+        self.sender().is_some()
+    }
+
+    fn leaf_hash(&self) -> H256 {
+        // Construct vector of Tokens
+        let new_owner = ethabi::Token::Address(self.newOwner);
+        let token_id = ethabi::Token::Uint(self.tokenId);
+        let prev_blk_num = ethabi::Token::Uint(self.prevBlkNum);
+        let msg_vec = &[new_owner, token_id, prev_blk_num];
+        // Encode vector of Tokens
+        let msg_bytes = ethabi::encode(msg_vec);
+        // Return keccak hash of encoded struct
+        keccak(msg_bytes)
+    }
+
     fn receiver(&self) -> Option<Address> {
         Some(self.newOwner)
     }
@@ -102,6 +112,9 @@ impl PlasmaCashTxn for Transaction {
                 return TxnCmp::Child;
 
             // Both of us have the same parent
+            // Note: due to how Plasma Cash is designed, one of these is
+            //       most likely not in the txn trie, unless the operator
+            //       made malicious modifications.
             } else if self.sender().unwrap() == other.sender().unwrap() {
 
                 // But mine comes before, so I'm earlier
