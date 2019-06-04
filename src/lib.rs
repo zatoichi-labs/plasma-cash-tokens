@@ -89,6 +89,3 @@ impl<T: PlasmaCashTxn> Token<T> {
         self.history.last().unwrap().receiver().unwrap()
     }
 }
-
-#[cfg(test)]
-mod test;

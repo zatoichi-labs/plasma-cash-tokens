@@ -1,4 +1,5 @@
-use super::*;
+extern crate plasma_cash_token;
+use plasma_cash_token::*;
 
 extern crate rand;
 
