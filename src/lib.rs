@@ -11,8 +11,9 @@ use keccak_hash::keccak;
 
 extern crate ethabi;
 
-fn pkey_to_address(pkey: &key::PublicKey, ctx: &Secp256k1) -> Address {
-    let pkey_hash = keccak(pkey.serialize_vec(ctx, false));
+fn pkey_to_address(pkey: &key::PublicKey) -> Address {
+    let ctx = Secp256k1::new();
+    let pkey_hash = keccak(pkey.serialize_vec(&ctx, false));
     Address::from_slice(&pkey_hash[..20])
 }
 
@@ -67,14 +68,15 @@ impl Transaction {
         Message::from_slice(keccak(msg_bytes).as_fixed_bytes()).unwrap()
     }
 
-    pub fn signer(&self, ctx: &Secp256k1) -> Address {
+    pub fn signer(&self) -> Address {
+        let ctx = Secp256k1::new();
         let msg_hash = self.unsigned_message();
         let pkey = ctx.recover(&msg_hash, &self.signature.unwrap()).unwrap();
-        pkey_to_address(&pkey, &ctx)
+        pkey_to_address(&pkey)
     }
 }
 
-pub fn is_history_valid(history: &[Transaction], ctx: &Secp256k1) -> bool {
+pub fn is_history_valid(history: &[Transaction]) -> bool {
     // If token has no history, return True
     if history.len() == 0 {
         return true;
@@ -83,7 +85,7 @@ pub fn is_history_valid(history: &[Transaction], ctx: &Secp256k1) -> bool {
     // History is valid if each transaction was signed by the previous receipient
     let signers: Vec<Address> = history.iter()
                                 .skip(1) // Don't care about signer of 1st txn
-                                .map(|txn| txn.signer(ctx))
+                                .map(|txn| txn.signer())
                                 .collect();
     let receivers: Vec<Address> = history.iter()
                                   // Note: Due to skip(1) above, this iterator
@@ -129,7 +131,6 @@ pub struct Token {
     pub owner: Address,
     pub status: TokenStatus,
     pub history: Vec<Transaction>,
-    ctx: Secp256k1,
 }
 
 impl Token {
@@ -139,7 +140,6 @@ impl Token {
             owner,
             status: TokenStatus::RootChain,
             history: Vec::new(),
-            ctx: Secp256k1::new(),
         }
     }
     
@@ -149,12 +149,11 @@ impl Token {
             _ => self.history.last().unwrap().newOwner,
         };
 
-        return is_history_valid(&self.history, &self.ctx)
-               && current_owner == self.owner;
+        is_history_valid(&self.history) && current_owner == self.owner
     }
 
     pub fn add_transaction(&mut self, txn: Transaction) {
-        assert_eq!(txn.signer(&self.ctx), self.owner);
+        assert_eq!(txn.signer(), self.owner);
         self.owner = txn.newOwner;
         self.history.push(txn);
     }
@@ -169,7 +168,7 @@ mod tests {
         let ctx = Secp256k1::new();
         let skey = key::SecretKey::from_slice(&ctx, data).unwrap();
         let pkey = key::PublicKey::from_secret_key(&ctx, &skey).unwrap();
-        let a = pkey_to_address(&pkey, &ctx);
+        let a = pkey_to_address(&pkey);
         (a, skey)
     }
 
@@ -198,7 +197,8 @@ mod tests {
         let uid = U256::from(123);
         let mut t = Token::new(uid, a);
         let txn = Transaction::new(a, uid, U256::from(0));
-        let sig = t.ctx.sign_recoverable(&txn.unsigned_message(), &skey).unwrap();
+        let ctx = Secp256k1::new();
+        let sig = ctx.sign_recoverable(&txn.unsigned_message(), &skey).unwrap();
         let txn = Transaction::new_signed(a, uid, U256::from(0), sig);
         assert_eq!(t.history.len(), 0);
         t.add_transaction(txn);
@@ -229,6 +229,6 @@ mod tests {
         let txn3 = Transaction::new_signed(a3, uid, U256::from(2), sig);
         // History should all be valid!
         let txns = vec![txn1, txn2, txn3];
-        assert!(is_history_valid(&txns, &ctx));
+        assert!(is_history_valid(&txns));
     }
 }
