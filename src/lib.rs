@@ -69,8 +69,8 @@ pub fn is_history_valid<T: PlasmaCashTxn>(history: &[T]) -> bool {
     let mut history_iter = history.iter().peekable();
     while let Some(prev_txn) = history_iter.next() {
         if let Some(txn) = history_iter.peek() {
-            match prev_txn.compare(&txn) {
-                TxnCmp::Parent => { },
+            match txn.compare(&prev_txn) {
+                TxnCmp::Child => { },
                 _ => { return false },
             }
         }
