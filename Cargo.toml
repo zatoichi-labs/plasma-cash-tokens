@@ -6,8 +6,10 @@ edition = "2018"
 
 [dependencies]
 bit-vec = "0.6.1"
-ethabi = "8.0.0"
-eth-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }
 ethereum-types = "0.6.0"
 keccak-hash = "0.2.0"
+
+[dev-dependencies]
+ethabi = "8.0.0"
+eth-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }
 rand = "0.3"
