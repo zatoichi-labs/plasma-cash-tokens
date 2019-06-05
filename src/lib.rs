@@ -1,5 +1,8 @@
+use bit_vec::BitVec;
+
 extern crate ethereum_types;
 pub use ethereum_types::{Address, U256, H256};
+
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
@@ -74,6 +77,32 @@ pub fn is_history_valid<T: PlasmaCashTxn>(history: &[T]) -> bool {
     }
 
     true
+}
+
+pub struct MerkleProof {
+    pub proof: Vec<H256>,
+}
+
+// TODO Make this a generic hashing function
+extern crate keccak_hash;
+use keccak_hash::keccak;
+
+impl MerkleProof {
+
+    /// Obtain the root hash following the SMT algorithm
+    /// Note: Proof is in un-compressed form
+    pub fn root(&self, key: U256, leaf_hash: H256) -> H256 {
+        let mut node = leaf_hash;
+        let path = BitVec::from_fn(256, |i| key.bit(i)); // TODO ensure in correct order
+        for (is_left, sibling_node) in path.iter().zip(self.proof.iter()) {
+            if is_left {
+                node = keccak([sibling_node.as_bytes(), node.as_bytes()].concat());
+            } else {
+                node = keccak([node.as_bytes(), sibling_node.as_bytes()].concat());
+            }
+        }
+        node
+    }
 }
 
 #[derive(Debug, PartialEq)]
