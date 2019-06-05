@@ -75,6 +75,10 @@ impl PlasmaCashTxn for Transaction {
         self.sender().is_some()
     }
 
+    fn empty_leaf_hash() -> H256 {
+        keccak([])
+    }
+
     fn leaf_hash(&self) -> H256 {
         // Construct vector of Tokens
         let new_owner = ethabi::Token::Address(self.newOwner);
