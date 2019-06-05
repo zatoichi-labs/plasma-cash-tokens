@@ -76,7 +76,15 @@ impl PlasmaCashTxn for Transaction {
     }
 
     fn empty_leaf_hash() -> H256 {
-        keccak([])
+        Self::hash_fn()(&[0; 32])
+    }
+
+    fn hash_fn() -> HashFn {
+        (|b| keccak(b)) // TODO Figure out why this isn't working
+    }
+
+    fn key_size() -> usize {
+        256 // key is 256 bits, trie is depth 256
     }
 
     fn leaf_hash(&self) -> H256 {

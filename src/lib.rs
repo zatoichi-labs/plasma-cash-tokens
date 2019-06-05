@@ -3,6 +3,7 @@ use bit_vec::BitVec;
 extern crate ethereum_types;
 pub use ethereum_types::{Address, U256, H256};
 
+pub type HashFn = (fn(&[u8]) -> H256);
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
@@ -32,7 +33,18 @@ pub trait PlasmaCashTxn {
     /// left up to the end user, but this must return a consistent hash
     /// for use in the Sparse Merkle Tree data structure that Plasma Cash
     /// is standardized around for it's key: value txn datastore.
+    /// Note: Does *not* have to match the hash function used for SMT proofs
     fn leaf_hash(&self) -> H256;
+
+    /// Returns an empty leaf hash. Used for proofs of exclusion in txn trie.
+    fn empty_leaf_hash() -> H256;
+
+    /// Returns the size (in bits) of the token uid. Used to traverse the
+    /// Sparse Merkle Tree to the correct depth.
+    fn key_size() -> usize;
+
+    /// Function used to verify proofs
+    fn hash_fn() -> HashFn;
 
     /// Simply gives the receiver of the transaction, if available.
     /// Note: This is a Convenience API. This info may not be public.
@@ -83,26 +95,48 @@ pub struct MerkleProof {
     pub proof: Vec<H256>,
 }
 
-// TODO Make this a generic hashing function
-extern crate keccak_hash;
-use keccak_hash::keccak;
-
 impl MerkleProof {
 
     /// Obtain the root hash following the SMT algorithm
     /// Note: Proof is in un-compressed form
-    pub fn root(&self, key: U256, leaf_hash: H256) -> H256 {
-        let mut node = leaf_hash;
-        let path = BitVec::from_fn(256, |i| key.bit(i)); // TODO ensure in correct order
-        for (is_left, sibling_node) in path.iter().zip(self.proof.iter()) {
+    pub fn get_root(&self,
+                    key: U256,
+                    key_size: usize,
+                    leaf_hash: H256,
+                    hash_fn: HashFn,
+                    ) -> H256 {
+        let mut node_hash = leaf_hash;
+        // Path is in leaf->root order (MSB to LSB)
+        let path = BitVec::from_fn(key_size, |i| key.bit(i)); // TODO ensure in correct order (LE or BE?)
+        // Branch is in root->leaf order (so reverse it!)
+        for (is_left, sibling_node) in path.iter().zip(self.proof.iter().rev()) {
+            let mut node = Vec::with_capacity(512);
             if is_left {
-                node = keccak([sibling_node.as_bytes(), node.as_bytes()].concat());
+                node = [sibling_node.as_bytes(), node_hash.as_bytes()].concat();
             } else {
-                node = keccak([node.as_bytes(), sibling_node.as_bytes()].concat());
+                node = [node_hash.as_bytes(), sibling_node.as_bytes()].concat();
             }
+            node_hash = (hash_fn)(&node);
         }
-        node
+        node_hash
     }
+}
+
+pub fn validate_root_hash<T>(plasma_root_hash: H256,
+                             uid: U256,
+                             txn: Option<&T>,
+                             proof: &MerkleProof,
+                             ) -> bool
+    where T: PlasmaCashTxn
+{
+    let leaf_hash = match txn {
+        Some(txn) => txn.leaf_hash(),
+        None => T::empty_leaf_hash(),
+    };
+
+    let key_size = T::key_size();
+
+    plasma_root_hash == proof.get_root(uid, key_size, leaf_hash, T::hash_fn())
 }
 
 #[derive(Debug, PartialEq)]
@@ -113,23 +147,31 @@ pub enum TokenStatus {
     Withdrawal,
 }
 
-pub struct Token<T: PlasmaCashTxn> {
+pub struct Token<'a, T: PlasmaCashTxn> {
     pub uid: U256, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
-    pub history: Vec<T>,
+    pub history: Vec<T>, // List of transactions
+    pub proofs: Vec<(H256, Option<&'a T>, MerkleProof)>, // List of proof data
 }
 
-impl<T: PlasmaCashTxn> Token<T> {
-    pub fn new(uid: U256) -> Token<T> {
+impl<'a, T: PlasmaCashTxn> Token<'a, T> {
+    pub fn new(uid: U256) -> Token<'a, T> {
         Token {
             uid,
             status: TokenStatus::RootChain,
             history: Vec::new(),
+            proofs: Vec::new(),
         }
     }
     
     pub fn is_valid(&self) -> bool {
+        let proof_data_matches =
+                self.proofs.iter().all(|(r, t, p)| {
+                    validate_root_hash(*r, self.uid, *t, p)
+                });
+
         is_history_valid(&self.history)
+        && proof_data_matches
     }
 
     pub fn add_transaction(&mut self, txn: T) {
