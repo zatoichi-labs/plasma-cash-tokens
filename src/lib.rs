@@ -61,7 +61,7 @@ pub fn is_history_valid<T: PlasmaCashTxn>(history: &[T]) -> bool {
     }
 
     // Ensure all transactions are invidiually well-formed
-    if !history.iter().map(|txn| txn.valid()).all(|a| a) {
+    if !history.iter().all(|txn| txn.valid()) {
         return false;
     }
 
