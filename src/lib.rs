@@ -1,9 +1,12 @@
 use bit_vec::BitVec;
 
+// TODO Eliminate this
 extern crate ethereum_types;
-pub use ethereum_types::{Address, U256, H256};
+pub type Address = ethereum_types::Address;
+pub type UID = ethereum_types::U256;
+pub type Hash = ethereum_types::H256;
 
-pub type HashFn = (fn(&[u8]) -> H256);
+pub type HashFn = (fn(&[u8]) -> Hash);
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
@@ -34,10 +37,10 @@ pub trait PlasmaCashTxn {
     /// for use in the Sparse Merkle Tree data structure that Plasma Cash
     /// is standardized around for it's key: value txn datastore.
     /// Note: Does *not* have to match the hash function used for SMT proofs
-    fn leaf_hash(&self) -> H256;
+    fn leaf_hash(&self) -> Hash;
 
     /// Returns an empty leaf hash. Used for proofs of exclusion in txn trie.
-    fn empty_leaf_hash() -> H256;
+    fn empty_leaf_hash() -> Hash;
 
     /// Returns the size (in bits) of the token uid. Used to traverse the
     /// Sparse Merkle Tree to the correct depth.
@@ -92,7 +95,7 @@ pub fn is_history_valid<T: PlasmaCashTxn>(history: &[T]) -> bool {
 }
 
 pub struct MerkleProof {
-    pub proof: Vec<H256>,
+    pub proof: Vec<Hash>,
 }
 
 impl MerkleProof {
@@ -100,11 +103,11 @@ impl MerkleProof {
     /// Obtain the root hash following the SMT algorithm
     /// Note: Proof is in un-compressed form
     pub fn get_root(&self,
-                    key: U256,
+                    key: UID,
                     key_size: usize,
-                    leaf_hash: H256,
+                    leaf_hash: Hash,
                     hash_fn: HashFn,
-                    ) -> H256 {
+                    ) -> Hash {
         let mut node_hash = leaf_hash;
         // Path is in leaf->root order (MSB to LSB)
         let path = BitVec::from_fn(key_size, |i| key.bit(i)); // TODO ensure in correct order (LE or BE?)
@@ -122,8 +125,8 @@ impl MerkleProof {
     }
 }
 
-pub fn validate_root_hash<T>(plasma_root_hash: H256,
-                             uid: U256,
+pub fn validate_root_hash<T>(plasma_root_hash: Hash,
+                             uid: UID,
                              txn: Option<&T>,
                              proof: &MerkleProof,
                              ) -> bool
@@ -148,14 +151,14 @@ pub enum TokenStatus {
 }
 
 pub struct Token<'a, T: PlasmaCashTxn> {
-    pub uid: U256, // Key for Sparse Merkle Tree datastore
+    pub uid: UID, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
     pub history: Vec<T>, // List of transactions
-    pub proofs: Vec<(H256, Option<&'a T>, MerkleProof)>, // List of proof data
+    pub proofs: Vec<(Hash, Option<&'a T>, MerkleProof)>, // List of proof data
 }
 
 impl<'a, T: PlasmaCashTxn> Token<'a, T> {
-    pub fn new(uid: U256) -> Token<'a, T> {
+    pub fn new(uid: UID) -> Token<'a, T> {
         Token {
             uid,
             status: TokenStatus::RootChain,

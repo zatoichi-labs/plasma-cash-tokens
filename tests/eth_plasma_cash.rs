@@ -9,6 +9,9 @@ use secp256k1::{Secp256k1, Message, RecoverableSignature, key};
 extern crate keccak_hash;
 use keccak_hash::keccak;
 
+extern crate ethereum_types;
+use ethereum_types::{Address, U256, H256};
+
 extern crate ethabi;
 
 fn pkey_to_address(pkey: &key::PublicKey) -> Address {
