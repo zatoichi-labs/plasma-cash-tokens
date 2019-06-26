@@ -11,10 +11,7 @@ extern crate keccak_hash;
 use keccak_hash::keccak;
 
 extern crate ethereum_types;
-use ethereum_types::{Address};
-
-type U256 = [u8; 32];
-type H256 = [u8; 32];
+use ethereum_types::{Address, U256, H256};
 
 extern crate ethabi;
 
@@ -86,7 +83,7 @@ impl Transaction {
     }
 }
 
-impl PlasmaCashTxn<U256, H256> for Transaction {
+impl PlasmaCashTxn for Transaction {
 
     fn token_id(&self) -> U256 {
         self.tokenId
@@ -98,18 +95,18 @@ impl PlasmaCashTxn<U256, H256> for Transaction {
     }
 
     fn empty_leaf_hash() -> H256 {
-        Self::hash_fn()(&[0; 32])
+        Self::hash_fn()(H256::from(0))
     }
 
     fn hash_fn() -> (fn(&[u8]) -> H256) {
-        (|b| *keccak(b).as_fixed_bytes() ) // TODO Figure out why this isn't working
+        (|b| *keccak(b).as_fixed_bytes() )
     }
 
     fn leaf_hash(&self) -> H256 {
         // Construct vector of Tokens
         let new_owner = ethabi::Token::Address(self.newOwner);
-        let token_id = ethabi::Token::Uint(ethereum_types::U256::from(self.tokenId));
-        let prev_blk_num = ethabi::Token::Uint(ethereum_types::U256::from(self.prevBlkNum));
+        let token_id = ethabi::Token::Uint(self.tokenId);
+        let prev_blk_num = ethabi::Token::Uint(self.prevBlkNum);
         let msg_vec = &[new_owner, token_id, prev_blk_num];
         // Encode vector of Tokens
         let msg_bytes = ethabi::encode(msg_vec);
@@ -171,8 +168,8 @@ fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, key::SecretKey) {
 
 #[test]
 fn validate_empty_token() {
-    let uid = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,123];
-    let t: Token<Transaction, U256, H256> = Token::new(uid);
+    let uid = U256::from(123);
+    let t: Token<Transaction> = Token::new(uid);
     assert_eq!(t.uid, uid);
     assert_eq!(t.status, TokenStatus::RootChain);
     assert_eq!(t.history.len(), 0);
@@ -182,9 +179,9 @@ fn validate_empty_token() {
 #[test]
 fn add_transaction() {
     let (a, skey) = gen_addr_and_skey_pair(&[1; 32]);
-    let uid = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,123];
-    let prev_blk_num = [0; 32];
-    let mut t: Token<Transaction, U256, H256> = Token::new(uid);
+    let uid = U256::from(123);
+    let prev_blk_num = U256::from(0);
+    let mut t: Token<Transaction> = Token::new(uid);
     let txn = Transaction::new(a, uid, prev_blk_num).sign(&skey);
 
     assert_eq!(t.history.len(), 0);
@@ -196,7 +193,7 @@ fn add_transaction() {
 #[test]
 fn lots_of_history() {
     // Same token
-    let uid = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,123];
+    let uid = U256::from(123);
 
     // 3 accounts
     let (a1, skey1) = gen_addr_and_skey_pair(&[1; 32]);
@@ -205,13 +202,13 @@ fn lots_of_history() {
 
     // Construct history...
     // txn1: a3 -> a1
-    let prev_blk_num = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0];
+    let prev_blk_num = U256::from(0);
     let txn1 = Transaction::new(a1, uid, prev_blk_num).sign(&skey3);
     // txn2: a1 -> a2
-    let prev_blk_num = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1];
+    let prev_blk_num = U256::from(1);
     let txn2 = Transaction::new(a2, uid, prev_blk_num).sign(&skey1);
     // txn3: a2 -> a3
-    let prev_blk_num = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,2];
+    let prev_blk_num = U256::from(2);
     let txn3 = Transaction::new(a3, uid, prev_blk_num).sign(&skey2);
 
     let txns = vec![txn1, txn2, txn3];
