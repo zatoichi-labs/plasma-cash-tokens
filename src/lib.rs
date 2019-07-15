@@ -1,6 +1,11 @@
-#![feature(fixed_size_array)]
-use std::array::FixedSizeArray;
+//FIXME #![feature(fixed_size_array)]
+//FIXME use std::array::FixedSizeArray;
 use bit_vec::BitVec;
+
+#[derive(Debug, PartialEq)]
+pub struct UidType([u32; 4]);//FIXME FixedSizeArray<u32>;
+#[derive(Debug, PartialEq)]
+pub struct HashType([u8; 32]);//FIXME FixedSizeArray<u8>;
 
 
 #[derive(Debug, PartialEq)]
@@ -17,10 +22,7 @@ pub enum TxnCmp {
 /// Plasma Transactions form a DAG where only one pathway back is
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
-pub trait PlasmaCashTxn<UidType, HashType>
-    where
-        UidType: FixedSizeArray<u8>,
-        HashType: FixedSizeArray<u8>,
+pub trait PlasmaCashTxn
 {
     /// Needed to obtain the key for a Merkle Proof
     fn token_id(&self) -> UidType;
@@ -65,26 +67,28 @@ pub fn get_root<UidType, HashType>(
     proof: Vec<HashType>,
     hash_fn: (fn(&[u8]) -> HashType),
 ) -> HashType
-    where
-        UidType: FixedSizeArray<u8>,
-        HashType: FixedSizeArray<u8>,
 {
     // Start result at leaf
     let mut node_hash = leaf_hash;
 
-    // Path is in leaf->root order (MSB to LSB)
-    let path = BitVec::from_bytes(key.as_slice()); // TODO ensure in correct order (LE or BE?)
-    assert_eq!(path.len(), proof.len());
+    // Path is the bits of key in leaf->root order (MSB to LSB)
+    // TODO ensure in correct order (LE or BE?)
+    let mut key_bytes: Vec<u8> = vec![];
+    for key_word in key.0.iter() {
+        key_bytes.extend(&key_word.to_le_bytes());
+    }
+    let path = BitVec::from_bytes(&key_bytes);
+    assert_eq!(path.len(), proof.len()); // Sanity check
 
     // Branch is in root->leaf order (so reverse it!)
     for (is_left, sibling_node) in path.iter().zip(proof.iter().rev()) {
         let node = if is_left {
-            sibling_node.as_slice().iter()
-                .chain(node_hash.as_slice().iter())
+            sibling_node.0.iter()
+                .chain(node_hash.0.iter())
                 .map(|a| *a).collect::<Vec<u8>>()
         } else {
-            node_hash.as_slice().iter()
-                .chain(sibling_node.as_slice().iter())
+            node_hash.0.iter()
+                .chain(sibling_node.0.iter())
                 .map(|a| *a).collect::<Vec<u8>>()
         };
         node_hash = (hash_fn)(node.as_slice());
@@ -98,8 +102,6 @@ pub fn is_history_valid<TxnType, UidType, HashType>(
 ) -> bool
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: FixedSizeArray<u8>,
-        HashType: FixedSizeArray<u8>,
 
 {
     // If token has no history, return True
@@ -134,11 +136,9 @@ pub enum TokenStatus {
     Withdrawal,
 }
 
-pub struct Token<TxnType, UidType, HashType>
+pub struct Token<TxnType>
     where
-        TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: FixedSizeArray<u8>,
-        HashType: FixedSizeArray<u8>,
+        TxnType: PlasmaCashTxn,
 {
     pub uid: UidType, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
@@ -146,13 +146,11 @@ pub struct Token<TxnType, UidType, HashType>
     pub proofs: Vec<Vec<HashType>>, // TODO Combine with history for complete inclusion/exclusion proofs
 }
 
-impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
+impl<TxnType> Token<TxnType>
     where
-        TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: FixedSizeArray<u8>,
-        HashType: FixedSizeArray<u8>,
+        TxnType: PlasmaCashTxn,
 {
-    pub fn new(uid: UidType) -> Token<TxnType, UidType, HashType> {
+    pub fn new(uid: UidType) -> Token<TxnType> {
         Token {
             uid,
             status: TokenStatus::RootChain,
