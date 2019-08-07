@@ -18,8 +18,9 @@ pub enum TxnCmp {
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
 pub trait PlasmaCashTxn<UidType, HashType>
-    where UidType: FixedSizeArray<u8>,
-          HashType: FixedSizeArray<u8>
+    where
+        UidType: FixedSizeArray<u8>,
+        HashType: FixedSizeArray<u8>,
 {
     /// Needed to obtain the key for a Merkle Proof
     fn token_id(&self) -> UidType;
@@ -58,13 +59,15 @@ pub trait PlasmaCashTxn<UidType, HashType>
     }
 }
 
-pub fn get_root<UidType, HashType>(key: UidType,
-                                   leaf_hash: HashType,
-                                   proof: Vec<HashType>,
-                                   hash_fn: (fn(&[u8]) -> HashType),
-                                   ) -> HashType
-    where UidType: FixedSizeArray<u8>,
-          HashType: FixedSizeArray<u8>
+pub fn get_root<UidType, HashType>(
+    key: UidType,
+    leaf_hash: HashType,
+    proof: Vec<HashType>,
+    hash_fn: (fn(&[u8]) -> HashType),
+) -> HashType
+    where
+        UidType: FixedSizeArray<u8>,
+        HashType: FixedSizeArray<u8>,
 {
     // Start result at leaf
     let mut node_hash = leaf_hash;
@@ -90,10 +93,13 @@ pub fn get_root<UidType, HashType>(key: UidType,
 }
 
 /// Validate ordered list of all transactions for a given token
-pub fn is_history_valid<TxnType, UidType, HashType>(history: &[TxnType]) -> bool
-    where TxnType: PlasmaCashTxn<UidType, HashType>,
-          UidType: FixedSizeArray<u8>,
-          HashType: FixedSizeArray<u8>
+pub fn is_history_valid<TxnType, UidType, HashType>(
+    history: &[TxnType],
+) -> bool
+    where
+        TxnType: PlasmaCashTxn<UidType, HashType>,
+        UidType: FixedSizeArray<u8>,
+        HashType: FixedSizeArray<u8>,
 
 {
     // If token has no history, return True
@@ -129,9 +135,10 @@ pub enum TokenStatus {
 }
 
 pub struct Token<TxnType, UidType, HashType>
-    where TxnType: PlasmaCashTxn<UidType, HashType>,
-          UidType: FixedSizeArray<u8>,
-          HashType: FixedSizeArray<u8>
+    where
+        TxnType: PlasmaCashTxn<UidType, HashType>,
+        UidType: FixedSizeArray<u8>,
+        HashType: FixedSizeArray<u8>,
 {
     pub uid: UidType, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
@@ -140,9 +147,10 @@ pub struct Token<TxnType, UidType, HashType>
 }
 
 impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
-    where TxnType: PlasmaCashTxn<UidType, HashType>,
-          UidType: FixedSizeArray<u8>,
-          HashType: FixedSizeArray<u8>
+    where
+        TxnType: PlasmaCashTxn<UidType, HashType>,
+        UidType: FixedSizeArray<u8>,
+        HashType: FixedSizeArray<u8>,
 {
     pub fn new(uid: UidType) -> Token<TxnType, UidType, HashType> {
         Token {
