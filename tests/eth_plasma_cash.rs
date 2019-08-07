@@ -1,8 +1,6 @@
 extern crate plasma_cash_token;
 use plasma_cash_token::*;
 
-extern crate rand;
-
 extern crate secp256k1;
 use secp256k1::{Secp256k1, Message, RecoverableSignature, key};
 
@@ -60,7 +58,7 @@ impl Transaction {
     }
 
     pub fn unsigned_message(&self) -> Message {
-        Message::from_slice(&self.leaf_hash()).unwrap()
+        Message::from_slice(self.leaf_hash().as_ref()).unwrap()
     }
 
     pub fn sign(&self, skey: &key::SecretKey) -> Transaction {
@@ -82,7 +80,7 @@ impl Transaction {
     }
 }
 
-impl PlasmaCashTxn for Transaction {
+impl PlasmaCashTxn<U256, H256> for Transaction {
 
     fn token_id(&self) -> U256 {
         self.tokenId
@@ -94,11 +92,11 @@ impl PlasmaCashTxn for Transaction {
     }
 
     fn empty_leaf_hash() -> H256 {
-        Self::hash_fn()(H256::from(0))
+        Self::hash_fn()(H256::from([0; 32]).as_ref())
     }
 
     fn hash_fn() -> (fn(&[u8]) -> H256) {
-        (|b| *keccak(b).as_fixed_bytes() )
+        keccak
     }
 
     fn leaf_hash(&self) -> H256 {
@@ -168,7 +166,7 @@ fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, key::SecretKey) {
 #[test]
 fn validate_empty_token() {
     let uid = U256::from(123);
-    let t: Token<Transaction> = Token::new(uid);
+    let t: Token<Transaction, U256, H256> = Token::new(uid);
     assert_eq!(t.uid, uid);
     assert_eq!(t.status, TokenStatus::RootChain);
     assert_eq!(t.history.len(), 0);
@@ -180,7 +178,7 @@ fn add_transaction() {
     let (a, skey) = gen_addr_and_skey_pair(&[1; 32]);
     let uid = U256::from(123);
     let prev_blk_num = U256::from(0);
-    let mut t: Token<Transaction> = Token::new(uid);
+    let mut t: Token<Transaction, U256, H256> = Token::new(uid);
     let txn = Transaction::new(a, uid, prev_blk_num).sign(&skey);
 
     assert_eq!(t.history.len(), 0);
