@@ -1,11 +1,4 @@
-//FIXME #![feature(fixed_size_array)]
-//FIXME use std::array::FixedSizeArray;
 use bit_vec::BitVec;
-
-#[derive(Debug, PartialEq)]
-pub struct UidType([u32; 4]);//FIXME FixedSizeArray<u32>;
-#[derive(Debug, PartialEq)]
-pub struct HashType([u8; 32]);//FIXME FixedSizeArray<u8>;
 
 
 #[derive(Debug, PartialEq)]
@@ -22,7 +15,9 @@ pub enum TxnCmp {
 /// Plasma Transactions form a DAG where only one pathway back is
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
-pub trait PlasmaCashTxn
+pub trait PlasmaCashTxn<UidType, HashType>
+    where UidType: AsRef<[u64]>,
+          HashType: AsRef<[u8]>
 {
     /// Needed to obtain the key for a Merkle Proof
     fn token_id(&self) -> UidType;
@@ -67,14 +62,17 @@ pub fn get_root<UidType, HashType>(
     proof: Vec<HashType>,
     hash_fn: (fn(&[u8]) -> HashType),
 ) -> HashType
+    where
+        UidType: AsRef<[u64]>,
+        HashType: AsRef<[u8]>,
 {
     // Start result at leaf
     let mut node_hash = leaf_hash;
 
     // Path is the bits of key in leaf->root order (MSB to LSB)
-    // TODO ensure in correct order (LE or BE?)
+    // TODO ensure in correct order (key is LE)
     let mut key_bytes: Vec<u8> = vec![];
-    for key_word in key.0.iter() {
+    for key_word in key.as_ref().iter() {
         key_bytes.extend(&key_word.to_le_bytes());
     }
     let path = BitVec::from_bytes(&key_bytes);
@@ -83,12 +81,12 @@ pub fn get_root<UidType, HashType>(
     // Branch is in root->leaf order (so reverse it!)
     for (is_left, sibling_node) in path.iter().zip(proof.iter().rev()) {
         let node = if is_left {
-            sibling_node.0.iter()
-                .chain(node_hash.0.iter())
+            sibling_node.as_ref().iter()
+                .chain(node_hash.as_ref().iter())
                 .map(|a| *a).collect::<Vec<u8>>()
         } else {
-            node_hash.0.iter()
-                .chain(sibling_node.0.iter())
+            node_hash.as_ref().iter()
+                .chain(sibling_node.as_ref().iter())
                 .map(|a| *a).collect::<Vec<u8>>()
         };
         node_hash = (hash_fn)(node.as_slice());
@@ -102,6 +100,8 @@ pub fn is_history_valid<TxnType, UidType, HashType>(
 ) -> bool
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
+        UidType: AsRef<[u64]>,
+        HashType: AsRef<[u8]>,
 
 {
     // If token has no history, return True
@@ -136,9 +136,11 @@ pub enum TokenStatus {
     Withdrawal,
 }
 
-pub struct Token<TxnType>
+pub struct Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn,
+        UidType: AsRef<[u64]>,
+        HashType: AsRef<[u8]>
 {
     pub uid: UidType, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
@@ -146,11 +148,13 @@ pub struct Token<TxnType>
     pub proofs: Vec<Vec<HashType>>, // TODO Combine with history for complete inclusion/exclusion proofs
 }
 
-impl<TxnType> Token<TxnType>
+impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
     where
-        TxnType: PlasmaCashTxn,
+        TxnType: PlasmaCashTxn<UidType, HashType>,
+        UidType: AsRef<[u64]>,
+        HashType: AsRef<[u8]>
 {
-    pub fn new(uid: UidType) -> Token<TxnType> {
+    pub fn new(uid: UidType) -> Token<TxnType, UidType, HashType> {
         Token {
             uid,
             status: TokenStatus::RootChain,
