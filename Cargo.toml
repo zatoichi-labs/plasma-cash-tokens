@@ -1,7 +1,7 @@
 [package]
 name = "plasma-cash-token"
 version = "0.1.0"
-authors = ["Bryant Eisenbach <fubuloubu@gmail.com>"]
+authors = ["Zatoichi Labs <admin@zatoichi-labs.com"]
 edition = "2018"
 
 [dependencies]
