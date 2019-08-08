@@ -16,8 +16,9 @@ pub enum TxnCmp {
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
 pub trait PlasmaCashTxn<UidType, HashType>
-    where UidType: AsRef<[u64]>,
-          HashType: AsRef<[u8]>
+    where
+        UidType: AsRef<[u64]>,
+        HashType: AsRef<[u8]>,
 {
     /// Needed to obtain the key for a Merkle Proof
     fn token_id(&self) -> UidType;
@@ -138,7 +139,7 @@ pub enum TokenStatus {
 
 pub struct Token<TxnType, UidType, HashType>
     where
-        TxnType: PlasmaCashTxn,
+        TxnType: PlasmaCashTxn<UidType, HashType>,
         UidType: AsRef<[u64]>,
         HashType: AsRef<[u8]>
 {
