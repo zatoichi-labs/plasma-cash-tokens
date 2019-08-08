@@ -1,6 +1,5 @@
-pub use bitvec::slice::BitSlice as UidType;
-
 pub use bitvec::prelude::*;
+
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
