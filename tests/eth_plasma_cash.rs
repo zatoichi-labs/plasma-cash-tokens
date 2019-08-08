@@ -95,10 +95,10 @@ impl Transaction {
         let token_id = ethabi::Token::Uint(token_id);
         // TODO Fix this mess
         let mut prev_blk_num = eth_U256::from(0);
-        prev_blk_num.0[0] = self.tokenId[0];
-        prev_blk_num.0[1] = self.tokenId[1];
-        prev_blk_num.0[2] = self.tokenId[2];
-        prev_blk_num.0[3] = self.tokenId[3];
+        prev_blk_num.0[0] = self.prevBlkNum[0];
+        prev_blk_num.0[1] = self.prevBlkNum[1];
+        prev_blk_num.0[2] = self.prevBlkNum[2];
+        prev_blk_num.0[3] = self.prevBlkNum[3];
         let prev_blk_num = ethabi::Token::Uint(prev_blk_num);
         let msg_vec = &[new_owner, token_id, prev_blk_num];
         // Encode vector of Tokens
