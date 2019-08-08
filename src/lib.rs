@@ -1,5 +1,6 @@
-use bit_vec::BitVec;
+pub use bitvec::slice::BitSlice as UidType;
 
+pub use bitvec::prelude::*;
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
@@ -17,7 +18,7 @@ pub enum TxnCmp {
 /// so it is important to allow this behavior to be compared.
 pub trait PlasmaCashTxn<UidType, HashType>
     where
-        UidType: AsRef<[u64]>,
+        UidType: Bits,
         HashType: AsRef<[u8]>,
 {
     /// Needed to obtain the key for a Merkle Proof
@@ -64,24 +65,21 @@ pub fn get_root<UidType, HashType>(
     hash_fn: (fn(&[u8]) -> HashType),
 ) -> HashType
     where
-        UidType: AsRef<[u64]>,
+        UidType: Bits,
         HashType: AsRef<[u8]>,
 {
     // Start result at leaf
     let mut node_hash = leaf_hash;
 
+    // Convert to &BitSlice
+    let key = key.as_bitslice::<BigEndian>();
+
     // Path is the bits of key in leaf->root order (MSB to LSB)
-    // TODO ensure in correct order (key is LE)
-    let mut key_bytes: Vec<u8> = vec![];
-    for key_word in key.as_ref().iter() {
-        key_bytes.extend(&key_word.to_le_bytes());
-    }
-    let path = BitVec::from_bytes(&key_bytes);
-    assert_eq!(path.len(), proof.len()); // Sanity check
+    assert_eq!(key.len(), proof.len()); // Sanity check
 
     // Branch is in root->leaf order (so reverse it!)
-    for (is_left, sibling_node) in path.iter().zip(proof.iter().rev()) {
-        let node = if is_left {
+    for (is_right, sibling_node) in key.iter().zip(proof.iter().rev()) {
+        let node = if is_right {
             sibling_node.as_ref().iter()
                 .chain(node_hash.as_ref().iter())
                 .map(|a| *a).collect::<Vec<u8>>()
@@ -101,7 +99,7 @@ pub fn is_history_valid<TxnType, UidType, HashType>(
 ) -> bool
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: AsRef<[u64]>,
+        UidType: Bits,
         HashType: AsRef<[u8]>,
 
 {
@@ -140,7 +138,7 @@ pub enum TokenStatus {
 pub struct Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: AsRef<[u64]>,
+        UidType: Bits,
         HashType: AsRef<[u8]>
 {
     pub uid: UidType, // Key for Sparse Merkle Tree datastore
@@ -152,7 +150,7 @@ pub struct Token<TxnType, UidType, HashType>
 impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: AsRef<[u64]>,
+        UidType: Bits,
         HashType: AsRef<[u8]>
 {
     pub fn new(uid: UidType) -> Token<TxnType, UidType, HashType> {
