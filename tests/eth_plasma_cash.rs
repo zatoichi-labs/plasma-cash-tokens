@@ -8,7 +8,11 @@ extern crate keccak_hash;
 use keccak_hash::keccak;
 
 extern crate ethereum_types;
-use ethereum_types::{Address, U256, H256};
+// TODO Fix the use of U256 via eth_U256
+use ethereum_types::{Address, U256 as eth_U256, H256};
+
+// TODO Fix the use of U256 via eth_U256
+type U256 = [u64; 4];
 
 extern crate ethabi;
 
@@ -78,6 +82,29 @@ impl Transaction {
         let pkey = ctx.recover(&msg_hash, &self.signature.unwrap()).unwrap();
         Some(pkey_to_address(&pkey))
     }
+
+    pub fn encoded_msg(&self) -> Vec<u8> {
+        // Construct vector of Tokens
+        let new_owner = ethabi::Token::Address(self.newOwner);
+        // TODO Fix this mess
+        let mut token_id = eth_U256::from(0);
+        token_id.0[0] = self.tokenId[0];
+        token_id.0[1] = self.tokenId[1];
+        token_id.0[2] = self.tokenId[2];
+        token_id.0[3] = self.tokenId[3];
+        let token_id = ethabi::Token::Uint(token_id);
+        // TODO Fix this mess
+        let mut prev_blk_num = eth_U256::from(0);
+        prev_blk_num.0[0] = self.tokenId[0];
+        prev_blk_num.0[1] = self.tokenId[1];
+        prev_blk_num.0[2] = self.tokenId[2];
+        prev_blk_num.0[3] = self.tokenId[3];
+        let prev_blk_num = ethabi::Token::Uint(prev_blk_num);
+        let msg_vec = &[new_owner, token_id, prev_blk_num];
+        // Encode vector of Tokens
+        let msg_bytes = ethabi::encode(msg_vec);
+        msg_bytes
+    }
 }
 
 impl PlasmaCashTxn<U256, H256> for Transaction {
@@ -96,19 +123,12 @@ impl PlasmaCashTxn<U256, H256> for Transaction {
     }
 
     fn hash_fn() -> (fn(&[u8]) -> H256) {
-        keccak
+        |b| { keccak(b) }
     }
 
     fn leaf_hash(&self) -> H256 {
-        // Construct vector of Tokens
-        let new_owner = ethabi::Token::Address(self.newOwner);
-        let token_id = ethabi::Token::Uint(self.tokenId);
-        let prev_blk_num = ethabi::Token::Uint(self.prevBlkNum);
-        let msg_vec = &[new_owner, token_id, prev_blk_num];
-        // Encode vector of Tokens
-        let msg_bytes = ethabi::encode(msg_vec);
         // Return keccak hash of encoded struct
-        Self::hash_fn()(&msg_bytes)
+        Self::hash_fn()(&self.encoded_msg())
     }
 
     fn compare(&self, other: &Transaction) -> TxnCmp {
@@ -165,7 +185,7 @@ fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, key::SecretKey) {
 
 #[test]
 fn validate_empty_token() {
-    let uid = U256::from(123);
+    let uid = eth_U256::from(123).0;
     let t: Token<Transaction, U256, H256> = Token::new(uid);
     assert_eq!(t.uid, uid);
     assert_eq!(t.status, TokenStatus::RootChain);
@@ -176,8 +196,10 @@ fn validate_empty_token() {
 #[test]
 fn add_transaction() {
     let (a, skey) = gen_addr_and_skey_pair(&[1; 32]);
-    let uid = U256::from(123);
-    let prev_blk_num = U256::from(0);
+    // TODO Fix this mess
+    let uid = eth_U256::from(123).0;
+    // TODO Fix this mess
+    let prev_blk_num = eth_U256::from(0).0;
     let mut t: Token<Transaction, U256, H256> = Token::new(uid);
     let txn = Transaction::new(a, uid, prev_blk_num).sign(&skey);
 
@@ -190,7 +212,8 @@ fn add_transaction() {
 #[test]
 fn lots_of_history() {
     // Same token
-    let uid = U256::from(123);
+    // TODO Fix this mess
+    let uid = eth_U256::from(123).0;
 
     // 3 accounts
     let (a1, skey1) = gen_addr_and_skey_pair(&[1; 32]);
@@ -199,13 +222,16 @@ fn lots_of_history() {
 
     // Construct history...
     // txn1: a3 -> a1
-    let prev_blk_num = U256::from(0);
+    // TODO Fix this mess
+    let prev_blk_num = eth_U256::from(0).0;
     let txn1 = Transaction::new(a1, uid, prev_blk_num).sign(&skey3);
     // txn2: a1 -> a2
-    let prev_blk_num = U256::from(1);
+    // TODO Fix this mess
+    let prev_blk_num = eth_U256::from(1).0;
     let txn2 = Transaction::new(a2, uid, prev_blk_num).sign(&skey1);
     // txn3: a2 -> a3
-    let prev_blk_num = U256::from(2);
+    // TODO Fix this mess
+    let prev_blk_num = eth_U256::from(2).0;
     let txn3 = Transaction::new(a3, uid, prev_blk_num).sign(&skey2);
 
     let txns = vec![txn1, txn2, txn3];
