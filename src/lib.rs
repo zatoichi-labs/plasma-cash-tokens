@@ -183,7 +183,7 @@ impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
 
     pub fn add_transaction(&mut self, txn: TxnType) {
         if self.history.len() > 0 {
-            assert_eq!(txn.compare(self.history.last().unwrap()), TxnCmp::Parent);
+            assert_eq!(txn.compare(self.history.last().unwrap()), TxnCmp::Child);
         }
         self.history.push(txn);
     }
