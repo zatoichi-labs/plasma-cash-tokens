@@ -15,9 +15,13 @@ pub enum TokenStatus {
     Withdrawal,
 }
 
-/// Token storage data type that performs history verification and challenge detection
-/// for a given token. Can be serialized for wire transmission and data storage purposes.
-/// Note: Users of this API should should define this e.g.
+/// Token storage type that performs history verification and challenge detection
+/// for a given token.
+///
+/// Can be serialized for wire transmission and data storage purposes.
+///
+/// # Example
+/// Users of this API should should define this e.g.
 /// ```ignore
 /// let t: Token<Transaction, H256> = Token::new(uid); // `uid` is BitVec
 /// ```
