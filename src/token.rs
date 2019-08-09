@@ -2,11 +2,16 @@ use bitvec::prelude::BitVec;
 
 use crate::transaction::{PlasmaCashTxn, TxnCmp};
 
+/// Transfer and location status of the token.
 #[derive(Debug, PartialEq)]
 pub enum TokenStatus {
+    /// Token is freely transferrable on the Root Chain.
     RootChain,
+    /// Token is in process of Deposit into the Child Chain.
     Deposit,
+    /// Token is freely transferrable on the Child Chain.
     PlasmaChain,
+    /// Token is in process of Withdrawal back to the Root Chain.
     Withdrawal,
 }
 
