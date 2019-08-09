@@ -33,8 +33,23 @@ pub enum TxnCmp {
     Unrelated,
 }
 
+/// Plasma Cash Transaction trait for a given Token.
+///
+/// All the methods a Plasma Cash Transaction must implement to allow
+/// transaction and history verification logic to work. This allows
+/// custom transactions to be defined that allow significant customization
+/// of the semantics of transactions while conforming to the Plasma Cash
+/// specification, which creates safety in the Layer 1 ⇋ Layer 2 bridge.
 /// 
 /// # Note
+/// The design of this trait was such that it could be flexible enough to
+/// support both transparent and encrypted transactions. When used with
+/// encrypted transactions, there may be a logical difference in handling
+/// transactions verification between publicly accessible information and
+/// privledged parties to the transaction, so that should be taken into
+/// account when using this API.
+///
+/// # Example
 /// Users of this API should should define this e.g.
 /// ```ignore
 /// struct Transaction { ... }
@@ -45,39 +60,51 @@ pub trait PlasmaCashTxn<HashType>
     where
         HashType: AsRef<[u8]>,
 {
-    /// Needed to obtain the key for a Merkle Proof
+    /// Needed to obtain the key for a Merkle Proof.
     fn token_id(&self) -> BitVec;
 
-    /// Transaction is well-formed (implementation-specific)
-    /// Note: This might be used for certain use-cases to verify zk proofs,
-    ///       whereas other use cases might have only signature validation.
+    /// Transaction is well-formed (implementation-specific).
+    ///
+    /// # Note
+    /// This might be used for certain use-cases to verify zk proofs,
+    /// whereas other use cases might have only signature validation.
     fn valid(&self) -> bool;
 
-    /// Returns the "Leaf Hash" of this transaction, which may be the
-    /// encoded transaction structure directly (and signed), or it may
-    /// be the publicly accessible committment, as required for certain
-    /// applications such as Zero Knowledge Proofs. Implementation is
-    /// left up to the end user, but this must return a consistent hash
-    /// for use in the Sparse Merkle Tree data structure that Plasma Cash
+    /// Return "Leaf Hash" of this transaction.
+    ///
+    /// # Note
+    /// The "Leaf Hash" may be the encoded transaction structure directly,
+    /// or it may be a publicly accessible committment, as required for certain
+    /// applications such as Zero Knowledge Proofs.
+    ///
+    /// Implementation is left up to the end user, but this must return a consistent
+    /// hash for use in the Sparse Merkle Tree data structure that Plasma Cash
     /// is standardized around for it's key: value txn datastore.
-    /// Note: Does *not* have to match the hash function used for SMT proofs,
-    ///       but is not required to be different since the transaction must
-    ///       be valid for the smt proof to work.
+    ///
+    /// It does *not* have to match the hash function used for SMT proofs, but it must
+    /// be consistent and of the same size as the hashes returned by `hash_fn()` for
+    /// the smt proof validation to work.
     // TODO Validate security proof
     fn leaf_hash(&self) -> HashType;
 
-    /// Returns an empty leaf hash. Used for proofs of exclusion in txn trie.
+    /// Returns an empty leaf hash.
+    ///
+    /// Used for proofs of exclusion in txn trie.
     fn empty_leaf_hash() -> HashType;
 
-    /// Function used to verify proofs
+    /// Function used to verify proofs.
     fn hash_fn() -> (fn(&[u8]) -> HashType);
 
     /// Returns the relationship of another transaction (other) to this
-    /// one (self). See TxnCmp enum definition for more information.
+    /// one (self).
+    ///
+    /// See [TxnCmp](enum.TxnCmp.html) enum definition for more information.
     fn compare(&self, other: &Self) -> TxnCmp;
 
-    /// Obtain the root hash following the SMT algorithm
-    /// Note: Proof must be in un-compressed form (`proof.len() == smt.depth()`)
+    /// Obtain the root hash following the SMT algorithm.
+    ///
+    /// # Note
+    /// Proof must be in un-compressed form (`proof.len() == smt.depth()`)
     fn get_root(&self, proof: Vec<HashType>) -> HashType {
         get_root(&self.token_id(), self.leaf_hash(), proof, Self::hash_fn())
     }
