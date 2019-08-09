@@ -2,14 +2,19 @@ use bitvec::prelude::BitVec;
 
 use crate::merkle::get_root;
 
-/// Returns the relationship of another transaction (RHS) to this one (LHS).
+/// Different types of comparisions of Plasma Transactions.
+///
+/// Plasma Transactions form a DAG where only one pathway back to the origin is
+/// considered valid. However, there may be multiple pathways, so it is important
+/// to allow this behavior to be compared in order to understand which transaction
+/// is legitimate.
 ///
 /// # Note
-/// This is used in the history verification logic, as well as withdrawal
-/// challenge detection logic. Different clients may have a privledged view
-/// of this ordering, since transactions may be encrypted in some context and
-/// unencrypted in others, which means relationships may differ depending on
-/// information privledge of the client.
+/// This comparision is used in the history verification logic, as well as withdrawal
+/// challenge detection logic. Different clients may have a privledged view of this
+/// ordering, since transactions may be encrypted in some context and unencrypted in
+/// others, which means relationships may differ depending on information privledge
+/// of the client.
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
     /// LHS & RHS are the same exact transaction
@@ -28,10 +33,9 @@ pub enum TxnCmp {
     Unrelated,
 }
 
-/// Plasma Transactions form a DAG where only one pathway back is
-/// considered legitimate. However, there may be multiple pathways,
-/// so it is important to allow this behavior to be compared.
-/// Note: Users of this API should should define this e.g.
+/// 
+/// # Note
+/// Users of this API should should define this e.g.
 /// ```ignore
 /// struct Transaction { ... }
 ///
