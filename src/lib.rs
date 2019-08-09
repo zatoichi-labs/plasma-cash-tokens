@@ -41,7 +41,10 @@ pub trait PlasmaCashTxn<UidType, HashType>
     /// left up to the end user, but this must return a consistent hash
     /// for use in the Sparse Merkle Tree data structure that Plasma Cash
     /// is standardized around for it's key: value txn datastore.
-    /// Note: Does *not* have to match the hash function used for SMT proofs
+    /// Note: Does *not* have to match the hash function used for SMT proofs,
+    ///       but is not required to be different since the transaction must
+    ///       be valid for the smt proof to work.
+    // TODO Validate security proof
     fn leaf_hash(&self) -> HashType;
 
     /// Returns an empty leaf hash. Used for proofs of exclusion in txn trie.
