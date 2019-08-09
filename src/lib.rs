@@ -15,6 +15,12 @@ pub enum TxnCmp {
 /// Plasma Transactions form a DAG where only one pathway back is
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
+/// Note: Users of this API should should define this e.g.
+///       ```
+///       struct Transaction { ... }
+///
+///       impl PlasmaCashTxn<U256, H256> for Transaction { ... }
+///       ```
 pub trait PlasmaCashTxn<UidType, HashType>
     where
         UidType: Bits,
@@ -24,8 +30,8 @@ pub trait PlasmaCashTxn<UidType, HashType>
     fn token_id(&self) -> UidType;
 
     /// Transaction is well-formed (implementation-specific)
-    /// Note: This might be used for certain use-cases to verify proofs,
-    ///       whereas other use cases might have only minimal verification.
+    /// Note: This might be used for certain use-cases to verify zk proofs,
+    ///       whereas other use cases might have only signature validation.
     fn valid(&self) -> bool;
 
     /// Returns the "Leaf Hash" of this transaction, which may be the
@@ -45,19 +51,23 @@ pub trait PlasmaCashTxn<UidType, HashType>
     fn hash_fn() -> (fn(&[u8]) -> HashType);
 
     /// Returns the relationship of another transaction (RHS) to this
-    /// one (LHS). See Enum definition for more information.
+    /// one (LHS). See TxnCmp enum definition for more information.
     /// Note: This is used in the history verification logic, as well as
-    ///       withdrawal challenge detection.
+    ///       withdrawal challenge detection logic.
+    /// Note: Different clients may have a privledged view of this ordering,
+    ///       since transactions may be encrypted in some context and un-
+    ///       encrypted in others, which means relationships may differ
+    ///       depending on information privledge of the client.
     fn compare(&self, other: &Self) -> TxnCmp;
 
     /// Obtain the root hash following the SMT algorithm
-    /// Note: Proof is in un-compressed form
+    /// Note: Proof must be in un-compressed form (`proof.len() == smt.depth()`)
     fn get_root(&self, proof: Vec<HashType>) -> HashType {
         get_root(self.token_id(), self.leaf_hash(), proof, Self::hash_fn())
     }
 }
 
-pub fn get_root<UidType, HashType>(
+fn get_root<UidType, HashType>(
     key: UidType,
     leaf_hash: HashType,
     proof: Vec<HashType>,
@@ -92,8 +102,8 @@ pub fn get_root<UidType, HashType>(
     node_hash
 }
 
-/// Validate ordered list of all transactions for a given token
-pub fn is_history_valid<TxnType, UidType, HashType>(
+// Validate ordered list of all transactions for a given token
+fn is_history_valid<TxnType, UidType, HashType>(
     history: &[TxnType],
 ) -> bool
     where
@@ -134,6 +144,12 @@ pub enum TokenStatus {
     Withdrawal,
 }
 
+/// Token storage data type that performs history verification and challenge detection
+/// for a given token. Can be serialized for wire transmission and data storage purposes.
+/// Note: Users of this API should should define this e.g.
+///       ```
+///       let t: Token<Transaction, U256, H256> = Token::new(123) // New token 123
+///       ```
 pub struct Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
@@ -172,3 +188,5 @@ impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
         self.history.push(txn);
     }
 }
+
+// TODO Add SMT MerkleDB for txn trie inclusion/exclusion checks
