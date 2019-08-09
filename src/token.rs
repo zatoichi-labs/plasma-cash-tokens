@@ -32,6 +32,8 @@ impl<'a, TxnType, HashType> Token<TxnType, HashType>
         TxnType: PlasmaCashTxn<HashType>,
         HashType: AsRef<[u8]>,
 {
+    /// Create new token with given uid stored on the rootchain.
+    /// (history is empty to start)
     pub fn new(uid: BitVec) -> Token<TxnType, HashType> {
         Token {
             uid,
@@ -40,11 +42,14 @@ impl<'a, TxnType, HashType> Token<TxnType, HashType>
             proofs: Vec::new(),
         }
     }
-    
+
+    /// Validate history of token is consistent
     pub fn is_valid(&self) -> bool {
         is_history_valid(&self.history)
     }
 
+    /// Add a new transaction to the history. Must first pass validation
+    /// that new transaction follows old one.
     pub fn add_transaction(&mut self, txn: TxnType) {
         if self.history.len() > 0 {
             assert_eq!(txn.compare(self.history.last().unwrap()), TxnCmp::Child);
