@@ -1,5 +1,9 @@
 extern crate plasma_cash_token;
-use plasma_cash_token::*;
+use plasma_cash_token::{
+    Token, TokenStatus,
+    PlasmaCashTxn, TxnCmp,
+    is_history_valid,
+};
 
 extern crate secp256k1;
 use secp256k1::{Secp256k1, Message, RecoverableSignature, key};
