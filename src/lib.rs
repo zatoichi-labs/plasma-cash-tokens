@@ -157,7 +157,7 @@ pub struct Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
         UidType: Bits,
-        HashType: AsRef<[u8]>
+        HashType: AsRef<[u8]>,
 {
     pub uid: UidType, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
@@ -169,7 +169,7 @@ impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
         UidType: Bits,
-        HashType: AsRef<[u8]>
+        HashType: AsRef<[u8]>,
 {
     pub fn new(uid: UidType) -> Token<TxnType, UidType, HashType> {
         Token {
