@@ -104,7 +104,7 @@ impl Transaction {
         // Construct vector of Tokens
         let new_owner = ethabi::Token::Address(self.newOwner);
         let token_id = ethabi::Token::Uint(self.tokenId);
-        let prev_blk_num = ethabi::Token::Uint(self.tokenId);
+        let prev_blk_num = ethabi::Token::Uint(self.prevBlkNum);
         let msg_vec = &[new_owner, token_id, prev_blk_num];
         // Encode vector of Tokens
         let msg_bytes = ethabi::encode(msg_vec);
