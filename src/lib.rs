@@ -1,5 +1,5 @@
-pub use bitvec::prelude::*;
-
+pub use bitvec::prelude::{LittleEndian, BigEndian, BitVec};
+use bitvec::prelude::BitSlice;
 
 #[derive(Debug, PartialEq)]
 pub enum TxnCmp {
@@ -19,15 +19,14 @@ pub enum TxnCmp {
 /// ```ignore
 /// struct Transaction { ... }
 ///
-/// impl PlasmaCashTxn<U256, H256> for Transaction { ... }
+/// impl PlasmaCashTxn<H256> for Transaction { ... }
 /// ```
-pub trait PlasmaCashTxn<UidType, HashType>
+pub trait PlasmaCashTxn<HashType>
     where
-        UidType: Bits,
         HashType: AsRef<[u8]>,
 {
     /// Needed to obtain the key for a Merkle Proof
-    fn token_id(&self) -> UidType;
+    fn token_id(&self) -> BitVec;
 
     /// Transaction is well-formed (implementation-specific)
     /// Note: This might be used for certain use-cases to verify zk proofs,
@@ -66,25 +65,21 @@ pub trait PlasmaCashTxn<UidType, HashType>
     /// Obtain the root hash following the SMT algorithm
     /// Note: Proof must be in un-compressed form (`proof.len() == smt.depth()`)
     fn get_root(&self, proof: Vec<HashType>) -> HashType {
-        get_root(self.token_id(), self.leaf_hash(), proof, Self::hash_fn())
+        get_root(&self.token_id(), self.leaf_hash(), proof, Self::hash_fn())
     }
 }
 
-fn get_root<UidType, HashType>(
-    key: UidType,
+fn get_root<HashType>(
+    key: &BitSlice,
     leaf_hash: HashType,
     proof: Vec<HashType>,
     hash_fn: (fn(&[u8]) -> HashType),
 ) -> HashType
     where
-        UidType: Bits,
         HashType: AsRef<[u8]>,
 {
     // Start result at leaf
     let mut node_hash = leaf_hash;
-
-    // Convert to &BitSlice
-    let key = key.as_bitslice::<BigEndian>();
 
     // Path is the bits of key in leaf->root order (MSB to LSB)
     assert_eq!(key.len(), proof.len()); // Sanity check
@@ -106,12 +101,11 @@ fn get_root<UidType, HashType>(
 }
 
 // Validate ordered list of all transactions for a given token
-fn is_history_valid<TxnType, UidType, HashType>(
+fn is_history_valid<TxnType, HashType>(
     history: &[TxnType],
 ) -> bool
     where
-        TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: Bits,
+        TxnType: PlasmaCashTxn<HashType>,
         HashType: AsRef<[u8]>,
 
 {
@@ -153,25 +147,23 @@ pub enum TokenStatus {
 /// ```ignore
 /// let t: Token<Transaction, U256, H256> = Token::new(123) // New token 123
 /// ```
-pub struct Token<TxnType, UidType, HashType>
+pub struct Token<TxnType, HashType>
     where
-        TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: Bits,
+        TxnType: PlasmaCashTxn<HashType>,
         HashType: AsRef<[u8]>,
 {
-    pub uid: UidType, // Key for Sparse Merkle Tree datastore
+    pub uid: BitVec, // Key for Sparse Merkle Tree datastore
     pub status: TokenStatus, // Convenience API
     pub history: Vec<TxnType>, // List of transactions
     pub proofs: Vec<Vec<HashType>>, // TODO Combine with history for complete inclusion/exclusion proofs
 }
 
-impl<TxnType, UidType, HashType> Token<TxnType, UidType, HashType>
+impl<'a, TxnType, HashType> Token<TxnType, HashType>
     where
-        TxnType: PlasmaCashTxn<UidType, HashType>,
-        UidType: Bits,
+        TxnType: PlasmaCashTxn<HashType>,
         HashType: AsRef<[u8]>,
 {
-    pub fn new(uid: UidType) -> Token<TxnType, UidType, HashType> {
+    pub fn new(uid: BitVec) -> Token<TxnType, HashType> {
         Token {
             uid,
             status: TokenStatus::RootChain,

@@ -2,7 +2,7 @@ extern crate plasma_cash_token;
 use plasma_cash_token::{
     Token, TokenStatus,
     PlasmaCashTxn, TxnCmp,
-    Bits, BitSlice, Cursor,
+    BigEndian, BitVec,
 };
 
 extern crate secp256k1;
@@ -13,23 +13,6 @@ use keccak_hash::keccak;
 
 extern crate ethereum_types;
 use ethereum_types::{Address, U256, H256};
-
-#[derive(Debug,PartialEq,PartialOrd,Copy,Clone)]
-pub struct Uid(U256);
-
-impl Uid {
-    pub fn new(uid: U256) -> Self {
-        Uid(uid)
-    }
-}
-
-impl Bits for Uid {
-    type Store = u64;
-
-    fn as_bitslice<C: Cursor>(&self) -> &BitSlice<C, Self::Store> {
-        (self.0).0.as_bitslice::<C>()
-    }
-}
 
 extern crate ethabi;
 
@@ -112,10 +95,19 @@ impl Transaction {
     }
 }
 
-impl PlasmaCashTxn<Uid, H256> for Transaction {
+// This utility function is necessary to convert and meet
+// the PlasmaCashTrait::token_id() signature
+// TODO Can we get rid of this?
+fn uid_to_bitvec(uid: U256) -> BitVec {
+    let mut uid_bytes: [u8; 32] = [0; 32];
+    uid.to_big_endian(&mut uid_bytes);
+    BitVec::<BigEndian, u8>::from_slice(&uid_bytes)
+}
 
-    fn token_id(&self) -> Uid {
-        Uid(self.tokenId)
+impl PlasmaCashTxn<H256> for Transaction {
+
+    fn token_id(&self) -> BitVec {
+        uid_to_bitvec(self.tokenId)
     }
 
     fn valid(&self) -> bool {
@@ -190,9 +182,9 @@ fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, key::SecretKey) {
 
 #[test]
 fn validate_empty_token() {
-    let uid = Uid(U256::from(123));
-    let t: Token<Transaction, Uid, H256> = Token::new(uid);
-    assert_eq!(t.uid, uid);
+    let uid = U256::from(123);
+    let t: Token<Transaction, H256> = Token::new(uid_to_bitvec(uid));
+    assert_eq!(t.uid, uid_to_bitvec(uid));
     assert_eq!(t.status, TokenStatus::RootChain);
     assert_eq!(t.history.len(), 0);
     assert!(t.is_valid());
@@ -203,7 +195,7 @@ fn add_transaction() {
     let (a, skey) = gen_addr_and_skey_pair(&[1; 32]);
     let uid = U256::from(123);
     let prev_blk_num = U256::from(0);
-    let mut t: Token<Transaction, Uid, H256> = Token::new(Uid(uid));
+    let mut t: Token<Transaction, H256> = Token::new(uid_to_bitvec(uid));
     let txn = Transaction::new(a, uid, prev_blk_num).sign(&skey);
 
     assert_eq!(t.history.len(), 0);
@@ -216,7 +208,7 @@ fn add_transaction() {
 fn lots_of_history() {
     // Same token
     let uid = U256::from(123);
-    let mut t: Token<Transaction, Uid, H256> = Token::new(Uid(uid));
+    let mut t: Token<Transaction, H256> = Token::new(uid_to_bitvec(uid));
 
     // 3 accounts
     let (a1, skey1) = gen_addr_and_skey_pair(&[1; 32]);
