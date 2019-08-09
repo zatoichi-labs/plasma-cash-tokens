@@ -14,7 +14,7 @@ pub enum TokenStatus {
 /// for a given token. Can be serialized for wire transmission and data storage purposes.
 /// Note: Users of this API should should define this e.g.
 /// ```ignore
-/// let t: Token<Transaction, U256, H256> = Token::new(123) // New token 123
+/// let t: Token<Transaction, H256> = Token::new(uid); // `uid` is BitVec
 /// ```
 pub struct Token<TxnType, HashType>
     where
