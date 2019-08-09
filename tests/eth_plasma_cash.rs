@@ -3,6 +3,7 @@ use plasma_cash_token::{
     Token, TokenStatus,
     PlasmaCashTxn, TxnCmp,
     is_history_valid,
+    Bits, BitSlice, Cursor,
 };
 
 extern crate secp256k1;
@@ -13,6 +14,23 @@ use keccak_hash::keccak;
 
 extern crate ethereum_types;
 use ethereum_types::{Address, U256, H256};
+
+#[derive(Debug,PartialEq,PartialOrd,Copy,Clone)]
+pub struct Uid(U256);
+
+impl Uid {
+    pub fn new(uid: U256) -> Self {
+        Uid(uid)
+    }
+}
+
+impl Bits for Uid {
+    type Store = u64;
+
+    fn as_bitslice<C: Cursor>(&self) -> &BitSlice<C, Self::Store> {
+        (self.0).0.as_bitslice::<C>()
+    }
+}
 
 extern crate ethabi;
 
@@ -95,10 +113,10 @@ impl Transaction {
     }
 }
 
-impl PlasmaCashTxn<U256, H256> for Transaction {
+impl PlasmaCashTxn<Uid, H256> for Transaction {
 
-    fn token_id(&self) -> U256 {
-        self.tokenId
+    fn token_id(&self) -> Uid {
+        Uid(self.tokenId)
     }
 
     fn valid(&self) -> bool {
@@ -173,8 +191,8 @@ fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, key::SecretKey) {
 
 #[test]
 fn validate_empty_token() {
-    let uid = U256::from(123);
-    let t: Token<Transaction, U256, H256> = Token::new(uid);
+    let uid = Uid(U256::from(123));
+    let t: Token<Transaction, Uid, H256> = Token::new(uid);
     assert_eq!(t.uid, uid);
     assert_eq!(t.status, TokenStatus::RootChain);
     assert_eq!(t.history.len(), 0);
@@ -186,7 +204,7 @@ fn add_transaction() {
     let (a, skey) = gen_addr_and_skey_pair(&[1; 32]);
     let uid = U256::from(123);
     let prev_blk_num = U256::from(0);
-    let mut t: Token<Transaction, U256, H256> = Token::new(uid);
+    let mut t: Token<Transaction, Uid, H256> = Token::new(Uid(uid));
     let txn = Transaction::new(a, uid, prev_blk_num).sign(&skey);
 
     assert_eq!(t.history.len(), 0);
