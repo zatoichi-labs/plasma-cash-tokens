@@ -2,7 +2,6 @@ extern crate plasma_cash_token;
 use plasma_cash_token::{
     Token, TokenStatus,
     PlasmaCashTxn, TxnCmp,
-    is_history_valid,
     Bits, BitSlice, Cursor,
 };
 
@@ -217,6 +216,7 @@ fn add_transaction() {
 fn lots_of_history() {
     // Same token
     let uid = U256::from(123);
+    let mut t: Token<Transaction, Uid, H256> = Token::new(Uid(uid));
 
     // 3 accounts
     let (a1, skey1) = gen_addr_and_skey_pair(&[1; 32]);
@@ -227,13 +227,18 @@ fn lots_of_history() {
     // txn1: a3 -> a1
     let prev_blk_num = U256::from(0);
     let txn1 = Transaction::new(a1, uid, prev_blk_num).sign(&skey3);
+    t.add_transaction(txn1);
+    assert!(t.is_valid());
+
     // txn2: a1 -> a2
     let prev_blk_num = U256::from(1);
     let txn2 = Transaction::new(a2, uid, prev_blk_num).sign(&skey1);
+    t.add_transaction(txn2);
+    assert!(t.is_valid());
+
     // txn3: a2 -> a3
     let prev_blk_num = U256::from(2);
     let txn3 = Transaction::new(a3, uid, prev_blk_num).sign(&skey2);
-
-    let txns = vec![txn1, txn2, txn3];
-    assert!(is_history_valid(&txns));
+    t.add_transaction(txn3);
+    assert!(t.is_valid());
 }
