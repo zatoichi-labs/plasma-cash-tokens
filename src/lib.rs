@@ -16,11 +16,11 @@ pub enum TxnCmp {
 /// considered legitimate. However, there may be multiple pathways,
 /// so it is important to allow this behavior to be compared.
 /// Note: Users of this API should should define this e.g.
-///       ```
-///       struct Transaction { ... }
+/// ```ignore
+/// struct Transaction { ... }
 ///
-///       impl PlasmaCashTxn<U256, H256> for Transaction { ... }
-///       ```
+/// impl PlasmaCashTxn<U256, H256> for Transaction { ... }
+/// ```
 pub trait PlasmaCashTxn<UidType, HashType>
     where
         UidType: Bits,
@@ -147,9 +147,9 @@ pub enum TokenStatus {
 /// Token storage data type that performs history verification and challenge detection
 /// for a given token. Can be serialized for wire transmission and data storage purposes.
 /// Note: Users of this API should should define this e.g.
-///       ```
-///       let t: Token<Transaction, U256, H256> = Token::new(123) // New token 123
-///       ```
+/// ```ignore
+/// let t: Token<Transaction, U256, H256> = Token::new(123) // New token 123
+/// ```
 pub struct Token<TxnType, UidType, HashType>
     where
         TxnType: PlasmaCashTxn<UidType, HashType>,
