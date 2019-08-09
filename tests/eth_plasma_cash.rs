@@ -228,17 +228,17 @@ fn lots_of_history() {
     let prev_blk_num = U256::from(0);
     let txn1 = Transaction::new(a1, uid, prev_blk_num).sign(&skey3);
     t.add_transaction(txn1);
-    assert!(t.is_valid());
 
     // txn2: a1 -> a2
     let prev_blk_num = U256::from(1);
     let txn2 = Transaction::new(a2, uid, prev_blk_num).sign(&skey1);
     t.add_transaction(txn2);
-    assert!(t.is_valid());
 
     // txn3: a2 -> a3
     let prev_blk_num = U256::from(2);
     let txn3 = Transaction::new(a3, uid, prev_blk_num).sign(&skey2);
     t.add_transaction(txn3);
+
+    // Verify txn history is valid
     assert!(t.is_valid());
 }
