@@ -4,8 +4,10 @@ version = "0.1.0"
 authors = ["Zatoichi Labs <admin@zatoichi-labs.com"]
 edition = "2018"
 
-[dependencies]
-bitvec = "0.14.0"
+[dependencies.bitvec]
+default-features = false
+features = ['alloc']
+version = "0.14"
 
 [dev-dependencies]
 ethabi = "8.0"
