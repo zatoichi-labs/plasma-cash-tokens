@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use bitvec::prelude::BitSlice;
 
 pub fn get_root<HashType>(

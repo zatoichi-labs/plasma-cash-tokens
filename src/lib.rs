@@ -1,3 +1,7 @@
+#![no_std]
+
+extern crate alloc;
+
 pub use bitvec::prelude::{LittleEndian, BigEndian, BitVec};
 
 mod transaction;

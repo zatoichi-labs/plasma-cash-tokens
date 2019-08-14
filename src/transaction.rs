@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use bitvec::prelude::BitVec;
 
 use crate::merkle::get_root;
