@@ -4,6 +4,13 @@ version = "0.1.0"
 authors = ["Zatoichi Labs <admin@zatoichi-labs.com"]
 edition = "2018"
 
+[features]
+default = ['std']
+no_std = []
+std = [
+    'bitvec/std',
+]
+
 [dependencies.bitvec]
 default-features = false
 features = ['alloc']
