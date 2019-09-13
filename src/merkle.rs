@@ -22,11 +22,11 @@ pub fn get_root<HashType>(
         let node = if is_right {
             sibling_node.as_ref().iter()
                 .chain(node_hash.as_ref().iter())
-                .map(|a| *a).collect::<Vec<u8>>()
+                .copied().collect::<Vec<u8>>()
         } else {
             node_hash.as_ref().iter()
                 .chain(sibling_node.as_ref().iter())
-                .map(|a| *a).collect::<Vec<u8>>()
+                .copied().collect::<Vec<u8>>()
         };
         node_hash = (hash_fn)(node.as_slice());
     }

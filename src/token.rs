@@ -62,7 +62,7 @@ impl<'a, TxnType, HashType> Token<TxnType, HashType>
     /// Add a new transaction to the history. Must first pass validation
     /// that new transaction follows old one.
     pub fn add_transaction(&mut self, txn: TxnType) {
-        if self.history.len() > 0 {
+        if !self.history.is_empty() {
             assert_eq!(txn.compare(self.history.last().unwrap()), TxnCmp::Child);
         }
         self.history.push(txn);
@@ -79,7 +79,7 @@ fn is_history_valid<TxnType, HashType>(
 
 {
     // If token has no history, return True
-    if history.len() == 0 {
+    if history.is_empty() {
         return true;
     }
 
