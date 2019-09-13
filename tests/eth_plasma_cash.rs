@@ -24,65 +24,14 @@ fn pkey_to_address(pkey: &key::PublicKey) -> Address {
 
 // camelCase is used here because of EIP-712
 #[allow(non_snake_case)]
-pub struct Transaction {
+#[derive(Copy, Clone)]
+pub struct UnsignedTransaction {
     pub newOwner: Address,
     pub tokenId: U256,
     pub prevBlkNum: U256,
-    signature: Option<RecoverableSignature>,
 }
 
-impl Transaction {
-    // camelCase is used here because of EIP-712
-    #[allow(non_snake_case)]
-    pub fn new(newOwner: Address,
-               tokenId: U256,
-               prevBlkNum: U256) -> Transaction
-    {
-        Transaction {
-            newOwner,
-            tokenId,
-            prevBlkNum,
-            signature: None,
-        }
-    }
-
-    // camelCase is used here because of EIP-712
-    #[allow(non_snake_case)]
-    pub fn new_signed(newOwner: Address,
-                      tokenId: U256,
-                      prevBlkNum: U256,
-                      signature: RecoverableSignature) -> Transaction
-    {
-        Transaction {
-            newOwner,
-            tokenId,
-            prevBlkNum,
-            signature: Some(signature),
-        }
-    }
-
-    pub fn unsigned_message(&self) -> Message {
-        Message::from_slice(self.leaf_hash().as_ref()).unwrap()
-    }
-
-    pub fn sign(&self, skey: &key::SecretKey) -> Transaction {
-        assert!(self.signature.is_none());
-        let ctx = Secp256k1::new();
-        let sig = ctx.sign_recoverable(&self.unsigned_message(), skey).unwrap();
-        Transaction::new_signed(self.newOwner, self.tokenId, self.prevBlkNum, sig)
-    }
-
-    pub fn receiver(&self) -> Option<Address> {
-        Some(self.newOwner)
-    }
-
-    pub fn sender(&self) -> Option<Address> {
-        let ctx = Secp256k1::new();
-        let msg_hash = self.unsigned_message();
-        let pkey = ctx.recover(&msg_hash, &self.signature.unwrap()).unwrap();
-        Some(pkey_to_address(&pkey))
-    }
-
+impl UnsignedTransaction {
     pub fn encoded_msg(&self) -> Vec<u8> {
         // Construct vector of Tokens
         let new_owner = ethabi::Token::Address(self.newOwner);
@@ -92,6 +41,78 @@ impl Transaction {
         // Encode vector of Tokens
         let msg_bytes = ethabi::encode(msg_vec);
         msg_bytes
+    }
+
+    fn unsigned_msg(&self) -> Message {
+        let msg_bytes = self.encoded_msg();
+        let msg_hash = keccak(msg_bytes);
+        Message::from_slice(msg_hash.as_ref()).unwrap()
+    }
+
+    pub fn sign(&self, skey: &key::SecretKey) -> Transaction {
+        let ctx = Secp256k1::new();
+        let sig = ctx.sign_recoverable(&self.unsigned_msg(), skey).unwrap();
+        Transaction::new_signed(*self, sig)
+    }
+}
+
+#[allow(non_snake_case)]
+pub struct Transaction {
+    pub newOwner: Address,
+    pub tokenId: U256,
+    pub prevBlkNum: U256,
+    signature: RecoverableSignature,
+}
+
+impl Transaction {
+    // camelCase is used here because of EIP-712
+    #[allow(non_snake_case)]
+    pub fn new(newOwner: Address,
+               tokenId: U256,
+               prevBlkNum: U256) -> UnsignedTransaction
+    {
+        UnsignedTransaction {
+            newOwner,
+            tokenId,
+            prevBlkNum,
+        }
+    }
+
+    // camelCase is used here because of EIP-712
+    #[allow(non_snake_case)]
+    pub fn new_signed(txn: UnsignedTransaction,
+               signature: RecoverableSignature) -> Transaction
+    {
+        Transaction {
+            newOwner: txn.newOwner,
+            tokenId: txn.tokenId,
+            prevBlkNum: txn.prevBlkNum,
+            signature,
+        }
+    }
+
+    pub fn encoded_msg(&self) -> Vec<u8> {
+        let unsigned_txn = UnsignedTransaction {
+            newOwner: self.newOwner,
+            tokenId: self.tokenId,
+            prevBlkNum: self.prevBlkNum,
+        };
+        unsigned_txn.encoded_msg()
+    }
+
+    pub fn unsigned_msg(&self) -> Message {
+        Message::from_slice(self.leaf_hash().as_ref()).unwrap()
+    }
+
+    pub fn receiver(&self) -> Option<Address> {
+        Some(self.newOwner)
+    }
+
+    pub fn sender(&self) -> Option<Address> {
+        let ctx = Secp256k1::new();
+        let msg_hash = self.unsigned_msg();
+        let pkey = ctx.recover(&msg_hash, &self.signature).unwrap();
+        Some(pkey_to_address(&pkey))
     }
 }
 
