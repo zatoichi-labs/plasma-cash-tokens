@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use core::result::Result;
 
 use bitvec::prelude::BitVec;
 
@@ -61,11 +62,15 @@ impl<'a, TxnType, HashType> Token<TxnType, HashType>
 
     /// Add a new transaction to the history. Must first pass validation
     /// that new transaction follows old one.
-    pub fn add_transaction(&mut self, txn: TxnType) {
-        if !self.history.is_empty() {
-            assert_eq!(txn.compare(self.history.last().unwrap()), TxnCmp::Child);
+    pub fn add_transaction(&mut self, txn: TxnType) -> Result<(), &'static str> {
+        match self.history.last() {
+            Some(last_txn) if txn.compare(last_txn) != TxnCmp::Child =>
+                Err("Transaction is not a child of previous transaction."),
+            _ => {
+                self.history.push(txn);
+                Ok(())
+            },
         }
-        self.history.push(txn);
     }
 }
 
