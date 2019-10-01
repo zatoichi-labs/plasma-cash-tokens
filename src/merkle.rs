@@ -43,3 +43,65 @@ pub fn get_root<HashType>(
 }
 
 // TODO Add SMT MerkleDB for txn trie inclusion/exclusion checks
+
+/// Tests generated using Python package `py-trie`, which contains a Sparse Merkle Tree
+/// library created by the author and maintained by the Ethereum Foundation.
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use bitvec::prelude::*;
+    use ethereum_types::H256;
+    extern crate hex;
+    use keccak_hash::keccak;
+
+    fn hasher(input: &[u8]) -> H256 {
+        keccak(input)
+    }
+
+    fn hex_to_h256(hexstr: &str) -> H256 {
+        let bytes = hex::decode(hexstr).unwrap();
+        let mut bytes32 = [0u8; 32];
+        bytes32.copy_from_slice(bytes.as_ref());
+        H256::from(bytes32)
+    }
+
+    #[test]
+    fn mismatch_size_fails() {
+        let key: u8 = 7;
+        let key: &BitSlice = key.as_bitslice::<BigEndian>();
+        let leaf_hash = hex_to_h256(
+            "0000000000000000000000000000000000000000000000000000000000000000"
+        );
+        let proof = vec![
+            // Should be 8 nodes, not 1
+            "0000000000000000000000000000000000000000000000000000000000000000",
+        ].iter().map(|h| hex_to_h256(h)).collect::<Vec<H256>>();
+        assert!(get_root(key, leaf_hash, proof, hasher).is_err());
+    }
+
+    #[test]
+    /// `calc_root(b"\x07", EMPTY_BYTES32, [EMPTY_BYTES32] * 8)`
+    fn depth_8_root_blank_node() {
+        let key: u8 = 7;
+        let key: &BitSlice = key.as_bitslice::<BigEndian>();
+        let leaf_hash = hex_to_h256( // hash of empty bytes32
+            "290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563"
+        );
+        let proof = vec![
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000001",
+        ].iter().map(|h| hex_to_h256(h)).collect::<Vec<H256>>();
+        let calculated_root = get_root(key, leaf_hash, proof, hasher).unwrap();
+        let root = hex_to_h256(
+            "1c0285e9d02f7aec67b4916dfe37254a507e00159bb4bb87a8511f9b6375f5ca"
+        );
+        assert_eq!(root, calculated_root);
+    }
+}

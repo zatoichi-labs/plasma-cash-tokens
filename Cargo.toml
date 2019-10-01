@@ -19,4 +19,5 @@ version = "0.14"
 ethabi = "8.0"
 eth-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }
 ethereum-types = "0.6"
+hex = "0.4"
 keccak-hash = "0.2"
