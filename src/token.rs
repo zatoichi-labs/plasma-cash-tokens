@@ -1,4 +1,7 @@
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+
+#[cfg(not(feature = "std"))]
 use core::result::Result;
 
 use bitvec::prelude::BitVec;
