@@ -25,9 +25,9 @@ pub fn get_root<HashType>(
     // Start result at leaf
     let mut node_hash = leaf_hash;
 
-    // Path is the bits of key in leaf->root order (MSB to LSB)
+    // Path is the bits of key in leaf->root order (MSB to LSB), so reverse it!
     // Branch is in root->leaf order, so reverse it!
-    for (is_right, sibling_node) in key.iter().zip(proof.iter().rev()) {
+    for (is_right, sibling_node) in key.iter().rev().zip(proof.iter().rev()) {
         let node = if is_right {
             sibling_node.as_ref().iter()
                 .chain(node_hash.as_ref().iter())
