@@ -1,6 +1,9 @@
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
+#[cfg(not(feature = "std"))]
+use core::result::Result;
+
 use bitvec::prelude::BitVec;
 
 use crate::merkle::get_root;
@@ -108,7 +111,7 @@ pub trait PlasmaCashTxn<HashType>
     ///
     /// # Note
     /// Proof must be in un-compressed form (`proof.len() == smt.depth()`)
-    fn get_root(&self, proof: Vec<HashType>) -> HashType {
+    fn get_root(&self, proof: Vec<HashType>) -> Result<HashType, &'static str> {
         get_root(&self.token_id(), self.leaf_hash(), proof, Self::hash_fn())
     }
 }
