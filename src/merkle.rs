@@ -17,15 +17,16 @@ pub fn get_root<HashType>(
     where
         HashType: AsRef<[u8]>,
 {
-    // Start result at leaf
-    let mut node_hash = leaf_hash;
-
-    // Path is the bits of key in leaf->root order (MSB to LSB)
+    // Validate key size to proof size
     if key.len() != proof.len() { // Sanity check that sizes match
         return Err("Key must be the same size as the proof!");
     }
 
-    // Branch is in root->leaf order (so reverse it!)
+    // Start result at leaf
+    let mut node_hash = leaf_hash;
+
+    // Path is the bits of key in leaf->root order (MSB to LSB)
+    // Branch is in root->leaf order, so reverse it!
     for (is_right, sibling_node) in key.iter().zip(proof.iter().rev()) {
         let node = if is_right {
             sibling_node.as_ref().iter()
