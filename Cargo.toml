@@ -1,8 +1,11 @@
 [package]
 name = "plasma-cash-token"
+description = "Token logic using Plasma Cash history verification"
 version = "0.1.0"
 authors = ["Zatoichi Labs <admin@zatoichi-labs.com"]
 edition = "2018"
+license = "Apache-2.0"
+repository = "https://github.com/zatoichi-labs/plasma-cash-tokens"
 
 [features]
 default = ["std"]
