@@ -1,5 +1,5 @@
 [package]
-name = "plasma-cash-token"
+name = "plasma-cash-tokens"
 description = "Token logic using Plasma Cash history verification"
 version = "0.1.0"
 authors = ["Zatoichi Labs <admin@zatoichi-labs.com"]

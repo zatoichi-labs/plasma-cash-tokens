@@ -1,5 +1,5 @@
-extern crate plasma_cash_token;
-use plasma_cash_token::{
+extern crate plasma_cash_tokens;
+use plasma_cash_tokens::{
     Token, TokenStatus,
     PlasmaCashTxn, TxnCmp,
     BigEndian, BitVec,
