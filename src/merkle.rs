@@ -6,6 +6,9 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use core::result::Result;
 
+#[cfg(not(feature = "std"))]
+use core::convert::AsRef;
+
 use bitvec::prelude::BitSlice;
 
 pub fn get_root<HashType>(
