@@ -33,7 +33,7 @@ pub enum TokenStatus {
 /// ```
 pub struct Token<TxnType, HashType>
     where
-        TxnType: PlasmaCashTxn<HashType>,
+        TxnType: PlasmaCashTxn,
         HashType: AsRef<[u8]>,
 {
     pub uid: BitVec, // Key for Sparse Merkle Tree datastore
@@ -44,7 +44,7 @@ pub struct Token<TxnType, HashType>
 
 impl<TxnType, HashType> Token<TxnType, HashType>
     where
-        TxnType: PlasmaCashTxn<HashType>,
+        TxnType: PlasmaCashTxn,
         HashType: AsRef<[u8]>,
 {
     /// Create new token with given uid stored on the rootchain.
@@ -78,12 +78,11 @@ impl<TxnType, HashType> Token<TxnType, HashType>
 }
 
 // Validate ordered list of all transactions for a given token
-fn is_history_valid<TxnType, HashType>(
+fn is_history_valid<TxnType>(
     history: &[TxnType],
 ) -> bool
     where
-        TxnType: PlasmaCashTxn<HashType>,
-        HashType: AsRef<[u8]>,
+        TxnType: PlasmaCashTxn,
 
 {
     // If token has no history, return True

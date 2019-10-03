@@ -63,12 +63,11 @@ pub enum TxnCmp {
 /// ```ignore
 /// struct Transaction { ... }
 ///
-/// impl PlasmaCashTxn<H256> for Transaction { ... }
+/// impl PlasmaCashTxn for Transaction { ... }
 /// ```
-pub trait PlasmaCashTxn<HashType>
-    where
-        HashType: AsRef<[u8]>,
-{
+pub trait PlasmaCashTxn {
+    type HashType: AsRef<[u8]>;
+
     /// Needed to obtain the key for a Merkle Proof.
     fn token_id(&self) -> BitVec;
 
@@ -94,15 +93,15 @@ pub trait PlasmaCashTxn<HashType>
     /// be consistent and of the same size as the hashes returned by `hash_fn()` for
     /// the smt proof validation to work.
     // TODO Validate security proof
-    fn leaf_hash(&self) -> HashType;
+    fn leaf_hash(&self) -> Self::HashType;
 
     /// Returns an empty leaf hash.
     ///
     /// Used for proofs of exclusion in txn trie.
-    fn empty_leaf_hash() -> HashType;
+    fn empty_leaf_hash() -> Self::HashType;
 
     /// Function used to verify proofs.
-    fn hash_fn() -> (fn(&[u8]) -> HashType);
+    fn hash_fn() -> (fn(&[u8]) -> Self::HashType);
 
     /// Returns the relationship of another transaction (other) to this
     /// one (self).
@@ -114,7 +113,7 @@ pub trait PlasmaCashTxn<HashType>
     ///
     /// # Note
     /// Proof must be in un-compressed form (`proof.len() == smt.depth()`)
-    fn get_root(&self, proof: Vec<HashType>) -> Result<HashType, &'static str> {
+    fn get_root(&self, proof: Vec<Self::HashType>) -> Result<Self::HashType, &'static str> {
         get_root(&self.token_id(), self.leaf_hash(), proof, Self::hash_fn())
     }
 }

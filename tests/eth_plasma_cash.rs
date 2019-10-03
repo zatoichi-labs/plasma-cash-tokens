@@ -125,7 +125,8 @@ fn uid_to_bitvec(uid: U256) -> BitVec {
     BitVec::<BigEndian, u8>::from_slice(&uid_bytes)
 }
 
-impl PlasmaCashTxn<H256> for Transaction {
+impl PlasmaCashTxn for Transaction {
+    type HashType = H256;
 
     fn token_id(&self) -> BitVec {
         uid_to_bitvec(self.tokenId)
