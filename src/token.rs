@@ -42,7 +42,7 @@ pub struct Token<TxnType, HashType>
     pub proofs: Vec<Vec<HashType>>, // TODO Combine with history for complete inclusion/exclusion proofs
 }
 
-impl<'a, TxnType, HashType> Token<TxnType, HashType>
+impl<TxnType, HashType> Token<TxnType, HashType>
     where
         TxnType: PlasmaCashTxn<HashType>,
         HashType: AsRef<[u8]>,
