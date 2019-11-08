@@ -6,7 +6,7 @@ use plasma_cash_tokens::{
 };
 
 extern crate secp256k1;
-use secp256k1::{Secp256k1, Message, RecoverableSignature, key};
+use secp256k1::{PublicKey, SecretKey, Message, Signature, RecoveryId, sign, recover};
 
 extern crate keccak_hash;
 use keccak_hash::keccak;
@@ -16,9 +16,8 @@ use ethereum_types::{Address, U256, H256};
 
 extern crate ethabi;
 
-fn pkey_to_address(pkey: &key::PublicKey) -> Address {
-    let ctx = Secp256k1::new();
-    let pkey_hash = keccak(pkey.serialize_vec(&ctx, false));
+fn pkey_to_address(pkey: &PublicKey) -> Address {
+    let pkey_hash = keccak(&pkey.serialize().to_vec());
     Address::from_slice(&pkey_hash[..20])
 }
 
@@ -46,13 +45,12 @@ impl UnsignedTransaction {
     fn unsigned_msg(&self) -> Message {
         let msg_bytes = self.encoded_msg();
         let msg_hash = keccak(msg_bytes);
-        Message::from_slice(msg_hash.as_ref()).unwrap()
+        Message::parse_slice(msg_hash.as_ref()).unwrap()
     }
 
-    pub fn sign(&self, skey: &key::SecretKey) -> Transaction {
-        let ctx = Secp256k1::new();
-        let sig = ctx.sign_recoverable(&self.unsigned_msg(), skey).unwrap();
-        Transaction::new_signed(*self, sig)
+    pub fn sign(&self, skey: &SecretKey) -> Transaction {
+        let (sig, recovery_id) = sign(&self.unsigned_msg(), skey);
+        Transaction::new_signed(*self, sig, recovery_id)
     }
 }
 
@@ -61,7 +59,8 @@ pub struct Transaction {
     pub newOwner: Address,
     pub tokenId: U256,
     pub prevBlkNum: U256,
-    signature: RecoverableSignature,
+    signature: Signature,
+    recovery_id: RecoveryId,
 }
 
 impl Transaction {
@@ -81,13 +80,15 @@ impl Transaction {
     // camelCase is used here because of EIP-712
     #[allow(non_snake_case)]
     pub fn new_signed(txn: UnsignedTransaction,
-               signature: RecoverableSignature) -> Transaction
+                      signature: Signature,
+                      recovery_id: RecoveryId) -> Transaction
     {
         Transaction {
             newOwner: txn.newOwner,
             tokenId: txn.tokenId,
             prevBlkNum: txn.prevBlkNum,
             signature,
+            recovery_id,
         }
     }
 
@@ -101,7 +102,7 @@ impl Transaction {
     }
 
     pub fn unsigned_msg(&self) -> Message {
-        Message::from_slice(self.leaf_hash().as_ref()).unwrap()
+        Message::parse_slice(self.leaf_hash().as_ref()).unwrap()
     }
 
     pub fn receiver(&self) -> Option<Address> {
@@ -109,9 +110,9 @@ impl Transaction {
     }
 
     pub fn sender(&self) -> Option<Address> {
-        let ctx = Secp256k1::new();
-        let msg_hash = self.unsigned_msg();
-        let pkey = ctx.recover(&msg_hash, &self.signature).unwrap();
+        let pkey = recover(&self.unsigned_msg(),
+                           &self.signature,
+                           &self.recovery_id).unwrap();
         Some(pkey_to_address(&pkey))
     }
 }
@@ -194,10 +195,9 @@ impl PlasmaCashTxn for Transaction {
 
 /****************************** TESTS ***********************************/
 
-fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, key::SecretKey) {
-    let ctx = Secp256k1::new();
-    let skey = key::SecretKey::from_slice(&ctx, data).unwrap();
-    let pkey = key::PublicKey::from_secret_key(&ctx, &skey).unwrap();
+fn gen_addr_and_skey_pair(data: &[u8]) -> (Address, SecretKey) {
+    let skey = SecretKey::parse_slice(data).unwrap();
+    let pkey = PublicKey::from_secret_key(&skey);
     let a = pkey_to_address(&pkey);
     (a, skey)
 }
