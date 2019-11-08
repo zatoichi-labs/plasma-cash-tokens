@@ -1,3 +1,0 @@
-[submodule "rust-secp256k1"]
-	path = rust-secp256k1
-	url = https://github.com/paritytech/rust-secp256k1
